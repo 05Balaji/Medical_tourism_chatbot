@@ -56,8 +56,9 @@ documents = splitter.create_documents([combined_text])
 
 # embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
-embedding_model = HuggingFaceEmbeddings(model_name = "sentence-transformers/all-MiniLM-L6-v2")
-
+embedding_model = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/paraphrase-MiniLM-L3-v2"
+)
 # client = chromadb.Client()
 # collection = client.create_collection(name = "medical_tourism_data")
 
