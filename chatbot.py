@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import Chroma,FAISS
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import PromptTemplate
 
@@ -62,9 +62,12 @@ embedding_model = HuggingFaceEmbeddings(
 # client = chromadb.Client()
 # collection = client.create_collection(name = "medical_tourism_data")
 
-vectorstore = Chroma.from_documents(documents = documents,
-                                    embedding = embedding_model,
-                                    persist_directory = "./chroma_db")
+# vectorstore = Chroma.from_documents(documents = documents,
+#                                     embedding = embedding_model,
+#                                     persist_directory = "./chroma_db")
+
+vectorstore = FAISS.from_documents(documents= documents,embedding=embedding_model)
+
 
 retriever = vectorstore.as_retriever(search_kwargs = {"k":3})
 
