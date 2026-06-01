@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pypdf import PdfReader
 from sentence_transformers import SentenceTransformer
 
-
+import os
 import requests
 from bs4 import BeautifulSoup
 
@@ -13,10 +13,14 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma,FAISS
 from langchain_ollama import ChatOllama
+from langchain_google_genai import  ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 
 from langgraph.graph import  StateGraph,END
 from typing import TypedDict
+
+from dotenv import load_dotenv
 
 # import chromadb
 # import ollama
@@ -51,13 +55,13 @@ combined_text = web_text + "\n" + text
         # chunks = combined_text.split("\n")
         # chunks = [chunk.strip() for chunk in chunks if chunk.strip() != ""]
 
-splitter = RecursiveCharacterTextSplitter(chunk_size = 500,chunk_overlap = 50)
+splitter = RecursiveCharacterTextSplitter(chunk_size = 1000,chunk_overlap = 500)
 documents = splitter.create_documents([combined_text])
 
 # embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
 embedding_model = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/paraphrase-MiniLM-L3-v2"
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
 )
 # client = chromadb.Client()
 # collection = client.create_collection(name = "medical_tourism_data")
@@ -66,10 +70,10 @@ embedding_model = HuggingFaceEmbeddings(
 #                                     embedding = embedding_model,
 #                                     persist_directory = "./chroma_db")
 
-vectorstore = FAISS.from_documents(documents= documents,embedding=embedding_model)
+vectorstore = Chroma.from_documents(documents= documents,embedding=embedding_model,persist_directory = "./chroma_db")
 
 
-retriever = vectorstore.as_retriever(search_kwargs = {"k":3})
+retriever = vectorstore.as_retriever(search_kwargs = {"k":5})
 
 # for i,chunk in enumerate(chunks):
 #     embedding = embedding_model.encode(chunk).tolist()
@@ -80,7 +84,11 @@ retriever = vectorstore.as_retriever(search_kwargs = {"k":3})
 #     )
 # print("pdf data scored in vector data base")
 
-llm = ChatOllama(model = "phi3")
+# llm = ChatOllama(model = "phi3")
+
+load_dotenv()
+llm = ChatGroq(model = "llama-3.1-8b-instant",
+               api_key =  os.getenv("Groq_API_KEY"))
 
 prompt = PromptTemplate(
     input_variables = ["context","question"],
@@ -118,10 +126,11 @@ def generate_answer(state : ChatState):
         context = state["context"],
         question = state["question"]
     )
-    response = llm.invoke(final_prompt)
-    return {
-        "answer" : response.content
-    }
+    try :
+        response = llm.invoke(final_prompt)
+        return {"answer":response.content}
+    except Exception as e:
+        return {"answer":f"error: {str(e)}"}
 
 graph = StateGraph(ChatState)
 graph.add_node("retrieve_context",retrieve_context)
@@ -144,26 +153,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# message = [
-#     {
-#         'role' : 'system',
-#         'content' : '''
-#         You are a helpful Medical Tourism Assistant.
-
-#             Help website visitors with:
-#             - Medical tourism information
-#             - Treatments
-#             - Hospitals
-#             - Travel guidance
-#             - Appointment support
-
-#             Guide users politely and professionally.
-#         '''
-#     }
-# ]
-# print("Medical Tourism Assistant Started!")
-# print("Type 'bye' to exit.\n")
 
 class ChatRequest(BaseModel):
     message : str
