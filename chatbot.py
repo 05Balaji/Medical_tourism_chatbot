@@ -25,7 +25,6 @@ from dotenv import load_dotenv
 # import chromadb
 # import ollama
 
-
 urls = [
     "https://www.patient.nineremit.com/",
     "https://www.hospital.nineremit.com/"
@@ -85,7 +84,7 @@ retriever = vectorstore.as_retriever(search_kwargs = {"k":5})
 # print("pdf data scored in vector data base")
 
 # llm = ChatOllama(model = "phi3")
-
+print("learning git")
 load_dotenv()
 
 llm = ChatGroq(model = "llama-3.1-8b-instant",
